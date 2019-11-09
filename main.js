@@ -89,8 +89,12 @@ mongoc.connect("mongodb://localhost:27017/", (err, db) => {
         dbi.createCollection('users', (err) => {
             if(!err) {
                 dbi.collection('users').createIndex( { "email": 1 }, { unique: true } );
-                app.listen(3000);
-                console.log("ready to listen");
+                dbi.createCollection('notes', (err) => {
+                    if(!err) {
+                        app.listen(3000);
+                        console.log("ready to listen");
+                    }
+                })
             }
         })
     } else {
