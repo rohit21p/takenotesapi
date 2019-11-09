@@ -18,5 +18,8 @@
   "homepage": "https://github.com/rohit21p/takenotesapi#readme",
   "devDependencies": {
     "nodemon": "^1.19.4"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
   }
 }
