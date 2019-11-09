@@ -84,44 +84,56 @@ app.get('/isLoggedIn', (req, res) => {
 })
 
 app.post('/create', (req, res) => {
-    body = [];
-    req.on('data', (data) => {
-        body.push(data);
-    });
-    req.on('end', () => {
-        body = JSON.parse(Buffer.concat(body).toString());
-        console.log(body);
-        dbi.createCollection(req.session.email, (err) => {
-            dbi.collection(req.session.email).insertOne(body, (err) => {
-                if (err) {
-                    res.json({
-                        inserted: false
-                    });
-                } else {
-                    res.json({
-                        inserted: true
-                    });
-                }
-            })
+    if(!req.session.loogedIn) {
+        res.json({
+            inserted: "Not Logged in"
         })
-    });
+    } else {
+        body = [];
+        req.on('data', (data) => {
+            body.push(data);
+        });
+        req.on('end', () => {
+            body = JSON.parse(Buffer.concat(body).toString());
+            console.log(body);
+            dbi.createCollection(req.session.email, (err) => {
+                dbi.collection(req.session.email).insertOne(body, (err) => {
+                    if (err) {
+                        res.json({
+                            inserted: false
+                        });
+                    } else {
+                        res.json({
+                            inserted: true
+                        });
+                    }
+                })
+            })
+        });
+    }
 })
 
 app.get('/notes', (req, res) => {
-    dbi.collection(req.session.email).find({}, (err, result) => {
-        if (err) {
-            res.json({
-                success: false
-            });
-        } else {
-            result.toArray((err, data)=> {
+    if(!req.session.loogedIn) {
+        res.json({
+            success: "Not Logged in"
+        })
+    } else {
+        dbi.collection(req.session.email).find({}, (err, result) => {
+            if (err) {
                 res.json({
-                    success: true,
-                    notes: data
+                    success: false
+                });
+            } else {
+                result.toArray((err, data)=> {
+                    res.json({
+                        success: true,
+                        notes: data
+                    })
                 })
-            })
-        }
-    })
+            }
+        })
+    }
 })
 
 mongoc.connect("mongodb://localhost:27017/", (err, db) => {
