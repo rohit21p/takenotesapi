@@ -70,6 +70,13 @@ app.post('/login', (req, res) => {
     });
 } )
 
+app.post('/logout', (req, res) => {
+    req.session.loogedIn = false;
+    res.json({
+        LoggedIn: false
+    });
+});
+
 mongoc.connect("mongodb://localhost:27017/", (err, db) => {
     if (!err) {
         dbi = db.db("hack");
