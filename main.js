@@ -13,8 +13,12 @@ app.use(session({
 }));
 
 app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', '*');
+    if(req.headers.origin != undefined)
+        res.setHeader('Access-Control-Allow-origin', req.headers.origin);
+    else 
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'content-type');
+    res.setHeader('Access-Control-Allow-Credentials', true);
     next();
 });
 
@@ -28,14 +32,38 @@ app.post('/signup', (req, res) => {
         console.log(body);
         dbi.collection('users').insertOne(body, (err) => {
             if (err) {
-                req.session.email = body.email;
-                req.session.loogedIn = true;
                 res.json({
                     loggedIn: false
                 });
             } else {
+                req.session.email = body.email;
+                req.session.loogedIn = true;
                 res.json({
                     loggedIn: true
+                });
+            }
+        })
+    });
+} )
+
+app.post('/login', (req, res) => {
+    body = [];
+    req.on('data', (data) => {
+        body.push(data);
+    });
+    req.on('end', () => {
+        body = JSON.parse(Buffer.concat(body).toString());
+        dbi.collection('users').findOne(body, (err, result) => {
+            if (result) {
+                console.log(result);
+                req.session.email = body.email;
+                req.session.loogedIn = true;
+                res.json({
+                    loggedIn: true
+                });
+            } else {
+                res.json({
+                    loggedIn: false
                 });
             }
         })
