@@ -107,6 +107,23 @@ app.post('/create', (req, res) => {
     });
 })
 
+app.get('/notes', (req, res) => {
+    dbi.collection(req.session.email).find({}, (err, result) => {
+        if (err) {
+            res.json({
+                success: false
+            });
+        } else {
+            result.toArray((err, data)=> {
+                res.json({
+                    success: true,
+                    notes: data
+                })
+            })
+        }
+    })
+})
+
 mongoc.connect("mongodb://localhost:27017/", (err, db) => {
     if (!err) {
         dbi = db.db("hack");
