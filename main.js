@@ -83,6 +83,30 @@ app.get('/isLoggedIn', (req, res) => {
     });
 })
 
+app.post('/create', (req, res) => {
+    body = [];
+    req.on('data', (data) => {
+        body.push(data);
+    });
+    req.on('end', () => {
+        body = JSON.parse(Buffer.concat(body).toString());
+        console.log(body);
+        dbi.createCollection(req.session.email, (err) => {
+            dbi.collection(req.session.email).insertOne(body, (err) => {
+                if (err) {
+                    res.json({
+                        inserted: false
+                    });
+                } else {
+                    res.json({
+                        inserted: true
+                    });
+                }
+            })
+        })
+    });
+})
+
 mongoc.connect("mongodb://localhost:27017/", (err, db) => {
     if (!err) {
         dbi = db.db("hack");
