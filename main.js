@@ -77,6 +77,12 @@ app.post('/logout', (req, res) => {
     });
 });
 
+app.get('/isLoggedIn', (req, res) => {
+    res.json({
+        LoggedIn: req.session.loogedIn
+    });
+})
+
 mongoc.connect("mongodb://localhost:27017/", (err, db) => {
     if (!err) {
         dbi = db.db("hack");
