@@ -268,6 +268,23 @@ app.get('/unpin/:id', (req, res) => {
     }
 })
 
+app.get('/delete/:id', (req, res) => {
+    if(!req.session.loogedIn) {
+        res.json({
+            success: "Not Logged in"
+        })
+    } else {
+        let myquery = { _id: mongod.ObjectID(req.params.id) };
+        dbi.collection(req.session.email).deleteOne(myquery, function(err, result) {
+            if (err) throw err;
+            req.session.otp = null;
+            res.json({
+                status: 'Deleted'
+            });
+        });
+    }
+})
+
 mongoc.connect("mongodb://localhost:27017/", (err, db) => {
     if (!err) {
         dbi = db.db("hack");
