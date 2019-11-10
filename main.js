@@ -1,10 +1,16 @@
 const express = require('express');
 const mongod = require('mongodb')
 const session = require('express-session');
+const nodemailer = require('nodemailer');
+const events = require('events')
+const sgMail = require('@sendgrid/mail');
+
+const config = require('./config')
 
 const app = express();
 const mongoc = mongod.MongoClient;
 let dbi;
+const ee = new events.EventEmitter();
 
 app.use(session({
     secret: 'Rohit',
@@ -96,19 +102,29 @@ app.post('/create', (req, res) => {
         req.on('end', () => {
             body = JSON.parse(Buffer.concat(body).toString());
             console.log(body);
-            dbi.createCollection(req.session.email, (err) => {
-                dbi.collection(req.session.email).insertOne(body, (err) => {
-                    if (err) {
-                        res.json({
-                            inserted: false
-                        });
-                    } else {
-                        res.json({
-                            inserted: true
-                        });
-                    }
-                })
-            })
+            if (body.title === undefined || body.title === '') {
+                res.json({
+                    inserted: 'no title'
+                });
+            } else if (body.desc === undefined  || body.desc === '') {
+                res.json({
+                    inserted: 'no note'
+                });
+            } else {
+                dbi.createCollection(req.session.email, (err) => {
+                    dbi.collection(req.session.email).insertOne(body, (err) => {
+                        if (err) {
+                            res.json({
+                                inserted: false
+                            });
+                        } else {
+                            res.json({
+                                inserted: true
+                            });
+                        }
+                    })
+                });
+            }
         });
     }
 })
@@ -134,6 +150,67 @@ app.get('/notes', (req, res) => {
             }
         })
     }
+})
+
+app.post('/reset', (req, res) => {
+    body = [];
+    req.on('data', (data) => {
+        body.push(data);
+    });
+    req.on('end', () => {
+        body = JSON.parse(Buffer.concat(body).toString());
+        console.log(body);
+        req.session.email = body.email;
+        const otp = Math.floor(Math.random() * (9999 - 1000) + 1000);
+        req.session.otp = ''+otp;
+        expire = function() {
+            req.session.otp = null;
+        }
+        ee.on('expire-'+req.session.email, expire)
+        console.log(req.session.otp, "before")
+        setTimeout(() => {
+            ee.emit('expire-'+req.session.email);
+            ee.removeListener('expire-'+req.session.email,expire)
+        }, 900000);
+        res.json({
+            status: 'check mail for otp'
+        });
+        sgMail.setApiKey(config.sgapi);
+        const msg = {
+            to: body.email,
+            from: config.email,
+            subject: 'TakeNotes - Reset Password',
+            text: 'Use this otp in 15 minutes to reset your password in the app.',
+            html: '<br>OTP:<strong>'+otp+'</strong><br><small>Use this otp in 15 minutes to reset your password in the app.</small>',
+        };
+        sgMail.send(msg);
+    });
+})
+
+app.post('/newpass', (req, res) => {
+    body = [];
+    req.on('data', (data) => {
+        body.push(data);
+    });
+    req.on('end', () => {
+        body = JSON.parse(Buffer.concat(body).toString());
+        console.log(body);
+        if (body.otp !== undefined && body.otp !== '' && req.session.otp === body.otp) {
+            let myquery = { email: req.session.email };
+            let newvalues = { $set: {password: body.password } };
+            dbi.collection("users").updateOne(myquery, newvalues, function(err, result) {
+                if (err) throw err;
+                req.session.otp = null;
+                res.json({
+                    status: 'Password Changed'
+                });
+              });
+        } else {
+            res.json({
+                status: 'Wrong or expired otp'
+            });
+        }
+    })
 })
 
 mongoc.connect("mongodb://localhost:27017/", (err, db) => {
