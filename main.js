@@ -44,7 +44,6 @@ app.post('/signup', (req, res) => {
         if (emailIsValid(body.email) && body.password.length >= 8) {
             dbi.collection('users').insertOne(body, (err) => {
                 if (err) {
-                    throw err;
                     res.json({
                         loggedIn: false
                     });
