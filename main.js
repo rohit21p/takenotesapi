@@ -28,6 +28,11 @@ app.use((req, res, next) => {
     next();
 });
 
+
+function emailIsValid (email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
 app.post('/signup', (req, res) => {
     body = [];
     req.on('data', (data) => {
@@ -35,20 +40,26 @@ app.post('/signup', (req, res) => {
     });
     req.on('end', () => {
         body = JSON.parse(Buffer.concat(body).toString());
-        console.log(body);
-        dbi.collection('users').insertOne(body, (err) => {
-            if (err) {
-                res.json({
-                    loggedIn: false
-                });
-            } else {
-                req.session.email = body.email;
-                req.session.loogedIn = true;
-                res.json({
-                    loggedIn: true
-                });
-            }
-        })
+        if (emailIsValid(body.email) && body.password.length >= 8) {
+            dbi.collection('users').insertOne(body, (err) => {
+                if (err) {
+                    res.json({
+                        loggedIn: false
+                    });
+                } else {
+                    req.session.email = body.email;
+                    req.session.loogedIn = true;
+                    res.json({
+                        loggedIn: true
+                    });
+                }
+            })
+        } else {
+            res.json({
+                loggedIn: false,
+                error: 'invalid email or password shorter than 8 characters.'
+            });
+        }
     });
 } )
 
@@ -160,30 +171,32 @@ app.post('/reset', (req, res) => {
     req.on('end', () => {
         body = JSON.parse(Buffer.concat(body).toString());
         console.log(body);
-        req.session.email = body.email;
-        const otp = Math.floor(Math.random() * (9999 - 1000) + 1000);
-        req.session.otp = ''+otp;
-        expire = function() {
-            req.session.otp = null;
+        if (emailIsValid(body.email)) {
+            req.session.email = body.email;
+            const otp = Math.floor(Math.random() * (9999 - 1000) + 1000);
+            req.session.otp = ''+otp;
+            expire = function() {
+                req.session.otp = null;
+            }
+            ee.on('expire-'+req.session.email, expire)
+            console.log(req.session.otp, "before")
+            setTimeout(() => {
+                ee.emit('expire-'+req.session.email);
+                ee.removeListener('expire-'+req.session.email,expire)
+            }, 900000);
+            res.json({
+                status: 'check mail for otp'
+            });
+            sgMail.setApiKey(config.sgapi);
+            const msg = {
+                to: body.email,
+                from: config.email,
+                subject: 'TakeNotes - Reset Password',
+                text: 'Use this otp in 15 minutes to reset your password in the app.',
+                html: '<br>OTP:<strong>'+otp+'</strong><br><small>Use this otp in 15 minutes to reset your password in the app.</small>',
+            };
+            sgMail.send(msg);
         }
-        ee.on('expire-'+req.session.email, expire)
-        console.log(req.session.otp, "before")
-        setTimeout(() => {
-            ee.emit('expire-'+req.session.email);
-            ee.removeListener('expire-'+req.session.email,expire)
-        }, 900000);
-        res.json({
-            status: 'check mail for otp'
-        });
-        sgMail.setApiKey(config.sgapi);
-        const msg = {
-            to: body.email,
-            from: config.email,
-            subject: 'TakeNotes - Reset Password',
-            text: 'Use this otp in 15 minutes to reset your password in the app.',
-            html: '<br>OTP:<strong>'+otp+'</strong><br><small>Use this otp in 15 minutes to reset your password in the app.</small>',
-        };
-        sgMail.send(msg);
     });
 })
 
@@ -196,15 +209,21 @@ app.post('/newpass', (req, res) => {
         body = JSON.parse(Buffer.concat(body).toString());
         console.log(body);
         if (body.otp !== undefined && body.otp !== '' && req.session.otp === body.otp) {
-            let myquery = { email: req.session.email };
-            let newvalues = { $set: {password: body.password } };
-            dbi.collection("users").updateOne(myquery, newvalues, function(err, result) {
-                if (err) throw err;
-                req.session.otp = null;
-                res.json({
-                    status: 'Password Changed'
+            if (body.password.length >= 8) {
+                let myquery = { email: req.session.email };
+                let newvalues = { $set: {password: body.password } };
+                dbi.collection("users").updateOne(myquery, newvalues, function(err, result) {
+                    if (err) throw err;
+                    req.session.otp = null;
+                    res.json({
+                        status: 'Password Changed'
+                    });
                 });
-              });
+            } else {
+                res.json({
+                    status: 'Password should have atleast 8 characters'
+                });
+            }
         } else {
             res.json({
                 status: 'Wrong or expired otp'
