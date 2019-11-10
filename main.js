@@ -146,7 +146,7 @@ app.post('/create', (req, res) => {
     }
 })
 
-app.get('/notes', (req, res) => {
+app.get('/getnotes', (req, res) => {
     if(!req.session.loogedIn) {
         res.json({
             success: "Not Logged in"
