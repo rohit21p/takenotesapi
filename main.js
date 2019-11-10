@@ -4,6 +4,7 @@ const session = require('express-session');
 const nodemailer = require('nodemailer');
 const events = require('events')
 const sgMail = require('@sendgrid/mail');
+const path = require('path');
 
 const config = require('./config')
 
@@ -305,6 +306,13 @@ app.get('/restore/:id', (req, res) => {
         });
     }
 })
+
+app.use(express.static('./takenotes'));
+
+app.use((req, res) => {
+    res.sendFile(path.join(__dirname, './takenotes/index.html'));
+})
+
 
 mongoc.connect("mongodb://localhost:27017/", (err, db) => {
     if (!err) {
