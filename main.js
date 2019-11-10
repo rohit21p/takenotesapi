@@ -44,6 +44,7 @@ app.post('/signup', (req, res) => {
         if (emailIsValid(body.email) && body.password.length >= 8) {
             dbi.collection('users').insertOne(body, (err) => {
                 if (err) {
+                    throw err;
                     res.json({
                         loggedIn: false
                     });
@@ -130,6 +131,7 @@ app.post('/create', (req, res) => {
                 dbi.createCollection(req.session.email, (err) => {
                     dbi.collection(req.session.email).insertOne(body, (err) => {
                         if (err) {
+                            throw err;
                             res.json({
                                 inserted: false
                             });
@@ -153,6 +155,7 @@ app.get('/notes', (req, res) => {
     } else {
         dbi.collection(req.session.email).find({}, (err, result) => {
             if (err) {
+                throw err;
                 res.json({
                     success: false
                 });
@@ -325,6 +328,7 @@ mongoc.connect("mongodb://localhost:27017/", (err, db) => {
                         app.listen(3000);
                         console.log("ready to listen");
                     }
+                    else throw err;
                 })
             }
         })
