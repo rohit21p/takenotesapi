@@ -88,6 +88,10 @@ app.post('/login', (req, res) => {
 } )
 
 app.get('/logout', (req, res) => {
+    let myquery = { deleted: true };
+    dbi.collection(req.session.email).deleteMany(myquery, function(err, result) {
+        if (err) throw err;
+    });
     req.session.loogedIn = false;
     res.json({
         LoggedIn: false
@@ -275,11 +279,28 @@ app.get('/delete/:id', (req, res) => {
         })
     } else {
         let myquery = { _id: mongod.ObjectID(req.params.id) };
-        dbi.collection(req.session.email).deleteOne(myquery, function(err, result) {
+        let newvalues = { $set: {deleted: true } };
+        dbi.collection(req.session.email).updateOne(myquery, newvalues, function(err, result) {
             if (err) throw err;
-            req.session.otp = null;
             res.json({
                 status: 'Deleted'
+            });
+        });
+    }
+})
+
+app.get('/restore/:id', (req, res) => {
+    if(!req.session.loogedIn) {
+        res.json({
+            success: "Not Logged in"
+        })
+    } else {
+        let myquery = { _id: mongod.ObjectID(req.params.id) };
+        let newvalues = { $set: {deleted: false } };
+        dbi.collection(req.session.email).updateOne(myquery, newvalues, function(err, result) {
+            if (err) throw err;
+            res.json({
+                status: 'Restored'
             });
         });
     }
