@@ -232,6 +232,42 @@ app.post('/newpass', (req, res) => {
     })
 })
 
+app.get('/pin/:id', (req, res) => {
+    if(!req.session.loogedIn) {
+        res.json({
+            success: "Not Logged in"
+        })
+    } else {
+        let myquery = { _id: mongod.ObjectID(req.params.id) };
+        let newvalues = { $set: {pin: true } };
+        dbi.collection(req.session.email).updateOne(myquery, newvalues, function(err, result) {
+            if (err) throw err;
+            req.session.otp = null;
+            res.json({
+                status: 'Pinned'
+            });
+        });
+    }
+})
+
+app.get('/unpin/:id', (req, res) => {
+    if(!req.session.loogedIn) {
+        res.json({
+            success: "Not Logged in"
+        })
+    } else {
+        let myquery = { _id: mongod.ObjectID(req.params.id) };
+        let newvalues = { $set: {pin: false } };
+        dbi.collection(req.session.email).updateOne(myquery, newvalues, function(err, result) {
+            if (err) throw err;
+            req.session.otp = null;
+            res.json({
+                status: 'Unpinned'
+            });
+        });
+    }
+})
+
 mongoc.connect("mongodb://localhost:27017/", (err, db) => {
     if (!err) {
         dbi = db.db("hack");
